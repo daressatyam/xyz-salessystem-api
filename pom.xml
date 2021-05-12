@@ -30,7 +30,7 @@
 				<version>3.4.2</version>
 				<extensions>true</extensions>
 				<configuration>
-				<cloudHubDeployment>    <uri>https://anypoint.mulesoft.com</uri>    <muleVersion>4.3.0</muleVersion>    <username>${anypoint.userName}</username>    <password>${anypoint.password}</password>    <applicationName>xyz-salessystem-api</applicationName>    <environment>Sandbox</environment>    <workerType>MICRO</workerType>  <workerSize>0.2vCores</workerSize>   <region>us-east-2</region>    <workers>1</workers>    <objectStoreV2>true</objectStoreV2>    </cloudHubDeployment>
+				<cloudHubDeployment>    <uri>https://anypoint.mulesoft.com</uri>    <muleVersion>4.3.0</muleVersion>    <username>${anypoint.userName}</username>    <password>${anypoint.password}</password>    <applicationName>xyz-salessystem-api</applicationName>    <environment>Sandbox</environment>     <workerSize>0.2vCores</workerSize>   <region>us-east-2</region>    <workers>1</workers>    <objectStoreV2>true</objectStoreV2>    </cloudHubDeployment>
 				<classifier>mule-application</classifier>
 				<sharedLibraries>
                         <sharedLibrary>
