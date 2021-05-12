@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:s3="http://www.mulesoft.org/schema/mule/s3"
+	xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/current/mule-s3.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
+	<salesforce:sfdc-config name="Salesforce_Config"
+		doc:name="Salesforce Config"
+		doc:id="58c39fba-90e7-4233-a8f0-b87b4a0361c4">
+		<salesforce:basic-connection
+			username="${sfdc.username}" password="${secure::sfdc.password}"
+			url="${sfdc.url}" securityToken="${secure::sfdc.token}" />
+	</salesforce:sfdc-config>
+	<os:object-store name="Object_store"
+		doc:name="Object store" doc:id="935fd518-14cd-45f4-92bf-9508f22b9b58" />
+	<email:smtp-config name="Email_SMTP"
+		doc:name="Email SMTP" doc:id="687e3584-ce97-439c-848b-9ccef58ede86">
+		<email:smtp-connection
+			host="#[p('email.connection.host')]"
+			port="#[p('email.connection.port')]"
+			user="#[p('email.connection.user')]"
+			password="${secure::email.connection.password}">
+			<email:properties>
+				<email:property
+					key="${email.connection.properties.key}"
+					value="${email.connection.properties.value}" />
+			</email:properties>
+		</email:smtp-connection>
+	</email:smtp-config>
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="ee0c04e2-2171-4eae-b36d-7a4df0216b7a"
+		file="config/${env}.yaml" />
+	<db:config name="Database_Config" doc:name="Database Config"
+		doc:id="e80d8396-20f5-4a29-be30-5c210fda8b37">
+		<db:my-sql-connection host="${db4.host}"
+			port="${db4.port}" user="${db4.user}"
+			password="${secure::db4.password}" database="${db4.database}" />
+	</db:config>
+	<global-property doc:name="Global Property"
+		doc:id="621d7aa4-7c7d-4e91-a986-aef78991383d" name="env" value="dev" />
+	<global-property doc:name="Global Property"
+		doc:id="a0b8bd9e-81f0-4732-8174-2c96b34ad437" name="token"
+		value="Teapot@1234" />
+	<secure-properties:config
+		name="Secure_Properties_Config" doc:name="Secure Properties Config"
+		doc:id="e56b5559-ac3d-4c74-90c1-61242a27840a"
+		file="config/${env}.yaml" key="${token}">
+		<secure-properties:encrypt
+			algorithm="Blowfish" />
+	</secure-properties:config>
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="7849b3c2-e7f1-404c-a2fd-aec8fd7e688d" file="dev.properties" />
+	<s3:config name="Amazon_S3_Configuration"
+		doc:name="Amazon S3 Configuration"
+		doc:id="3c0de462-825d-42ae-a39d-b67c69a81d6c">
+		<s3:basic-connection
+			accessKey="${secure::aws.accesskey}"
+			secretKey="${secure::aws.secretkey}" region="${aws.region}" />
+	</s3:config>
+	<api-gateway:autodiscovery apiId="16831455" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="b271ef94-9da3-43e3-84f4-4ad5fe490a1c" flowRef="sales_system_api-main" />
+</mule>

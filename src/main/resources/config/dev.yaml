@@ -1,0 +1,37 @@
+sfdc:
+  username: "daressatyamsingh@gmail.com"
+  password: "![M1xS+HkUSFcgnDhLr2d+5w==]"
+  token: "![KFjUyiE+oLiTTu6BC8QUxjWXF+hWruQjhpcLbB1Qe64=]"
+  url: "https://login.salesforce.com/services/Soap/u/51.0"
+ 
+db4:
+  host: "db4free.net"
+  port: "3306"
+  user: "teapot"
+  password: "![M1xS+HkUSFcgnDhLr2d+5w==]"
+  database: "daress"
+  
+file:
+  path: "C:/Users/satyamsingh/Desktop/sales"
+  
+aws:
+  accesskey: "![bQTLOMC9MlTPM0o3gI2uUKSf+DReYJlo]"
+  secretkey: "![xdXCz2ddQp869vNhnTlXA5Mg5F880iayib1GA9UfDB82kg2L7nZLy4CzLUqS7wB7]"
+  region: "us-east-2"
+
+email:
+  fromAddress: "jackspinnacle@gmail.com"
+  toAddress: "sudesh.gagare@apisero.com"
+  sub: "Failed to Upload Data to SalesForce"
+  subject: "Development: Summary Report of Batch Processing"
+  content: "Hello, \n You are receiving this email because: \n "
+  ## Below sample connection is for gmail as smtp ##
+  connection:
+    host: "smtp.gmail.com"
+    port: "587"
+    user: "jackspinnacle@gmail.com"
+    password: "![tDdWkhrjnyhZrL9pGffz2PMsTKqClASn]"
+    ### if using gmail to send email, please allow less secure apps for above email id https://myaccount.google.com/lesssecureapps ###
+    properties:
+      key: "mail.smtp.starttls.enable"
+      value: "true"

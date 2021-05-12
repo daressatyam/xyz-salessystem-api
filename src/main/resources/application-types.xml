@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="csv" format="csv">
+      <types:shape format="weave" example="examples/100000 Sales Records.csv"><![CDATA[%dw 2.0
+
+type csv = Array<{|  Region: String,   Country: String,   "Item Type": String,   "Sales Channel": String,   "Order Priority": String,   "Order Date": String,   "Order ID": String,   "Ship Date": String,   "Units Sold": String,   "Unit Price": String,   "Unit Cost": String,   "Total Revenue": String,   "Total Cost": String,   "Total Profit": String|}> {"isQuotedString": "false",
+"header": "true",
+"headerLineNumber": "0"}
+
+]]></types:shape>
+      <types:properties>
+        <types:property name="headerLineNumber" value="0"/>
+        <types:property name="header" value="true"/>
+        <types:property name="isQuotedString" value="false"/>
+      </types:properties>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#c520cd3d-3ad0-4fb9-8af9-43ccfaef022e"/>
+  <types:enrichment select="#8b6a2396-4c62-4c51-8b5d-66f58b775aad">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="csv"/>
+        </types:message>
+      </types:input-event>
+    </types:processor-declaration>
+  </types:enrichment>
+</types:mule>

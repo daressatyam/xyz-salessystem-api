@@ -1,0 +1,34 @@
+#%RAML 1.0
+title: Sales_System_API
+version: 1.0
+description:  It is a Sales System API.
+
+traits: 
+  errorresponse: !include exchange_modules/03173809-46cc-4abd-b798-3eb63a49ba7f/errorresponse/1.0.0/errorresponse.raml
+securitySchemes:
+  Oauth: !include exchange_modules/03173809-46cc-4abd-b798-3eb63a49ba7f/oauth20/1.0.0/oauth20.raml
+
+
+
+securedBy: [Oauth]
+/transfersalesforce:
+    is: [errorresponse]
+    displayName: Get the New Sales Details
+    description:  To get the salesdata user orderID
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: Added
+                
+/transferdb:
+    is: [errorresponse]
+    displayName: Transfer To DataBase System
+    description:  To transfer the sales data from salesforce to MDM System
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              example: Added

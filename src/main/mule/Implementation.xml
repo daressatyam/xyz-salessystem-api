@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:s3="http://www.mulesoft.org/schema/mule/s3"
+	xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ftp="http://www.mulesoft.org/schema/mule/ftp"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ftp http://www.mulesoft.org/schema/mule/ftp/current/mule-ftp.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/current/mule-s3.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<http:listener-config name="HTTP_Listener_config"
+		doc:name="HTTP Listener config"
+		doc:id="3d345b69-fb7d-4bda-b22e-3d31388c5107">
+		<http:listener-connection host="0.0.0.0"
+			port="8081" />
+	</http:listener-config>
+	<flow name="salessystemFlow"
+		doc:id="e11bde81-230a-4667-933a-b427a99d95fb">
+		<s3:get-object doc:name="Get object"
+			doc:id="c4ad7f02-67b6-49f9-b52e-b6db6b746905"
+			config-ref="Amazon_S3_Configuration" bucketName="topgolf-s3-bucket-1"
+			key="salesrecords.csv" />
+		<ee:transform doc:name="Transform Message"
+			doc:id="61bffc3c-172b-4921-a955-174c2db07888">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/csv
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	Name: "sales " ++ indexOfPayload01,
+	region__c: payload01.Region as String,
+	country__c: payload01.Country,
+	itemtype__c: payload01."Item Type",
+	saleschannel__c: payload01."Sales Channel" as String,
+	orderpriority__c: payload01."Order Priority" as String,
+	orderdate__c: payload01."Order Date" as String,
+	orderid__c: payload01."Order ID" as String,
+	shipdate__c: payload01."Ship Date",
+	unitprice__c: payload01."Unit Price",
+	unitcost__c: payload01."Unit Cost",
+	totalrevenue__c: payload01."Total Revenue",
+	totalcost__c: payload01."Total Cost",
+	totalprofit__c: payload01."Total Profit"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:create-job-bulk-api-v2
+			doc:name="Create job bulk api v 2"
+			doc:id="23bb1f76-a58e-4549-ae63-5497a4d65ff9"
+			config-ref="Salesforce_Config" operation="insert" lineEnding="CRLF"
+			objectType="salessystem__c" />
+		<ee:transform doc:name="Transform Message"
+			doc:id="18df003b-e65c-4bff-abb4-93f3d3f73b0d">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message": "All the Records have been Successfully Tranferred to Salesforce"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler>
+			<on-error-continue enableNotifications="true"
+				logException="true" doc:name="On Error Continue"
+				doc:id="c892c21d-419f-45fe-a0a8-3c7b2a06b1e1" type="ANY">
+				<ee:transform doc:name="Transform Message"
+					doc:id="51ec1f77-772c-4bb6-be6d-86e98724ddc1">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error-type":error.errorType,
+	"error-cause":error.cause.cause,
+	"error-cause-message": error.cause.message,
+	"errorMessage": error.errorMessage,
+	"error-description": error.detailedDescription
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<email:send doc:name="send"
+					doc:id="b2a1ddd6-b031-4b87-b6e2-03cf63fda09f"
+					config-ref="Email_SMTP" fromAddress="#[p('email.fromAddress')]"
+					subject="#[p('email.sub')]">
+					<email:to-addresses>
+						<email:to-address value="#[p('email.toAddress')]" />
+					</email:to-addresses>
+					<email:bcc-addresses />
+					<email:reply-to-addresses />
+					<email:body contentType="text/html" encoding="UTF-8" />
+				</email:send>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+	<flow name="SalesForceSystem_to_MDM_SYSTEM"
+		doc:id="bf4bde9f-2f1c-4acd-a52d-113024935ebd">
+		<logger level="INFO" doc:name="Logger"
+			doc:id="900a876c-8a9a-45ce-b8a0-6e3570cb3484"
+			message="#['Flow Starting']" />
+
+		<salesforce:query doc:name="Query"
+			doc:id="19070ec7-e52b-4c24-877f-e3a391d94d48"
+			config-ref="Salesforce_Config">
+			<salesforce:salesforce-query><![CDATA[select region__c, country__c, itemtype__c, saleschannel__c, orderpriority__c, orderdate__c, orderid__c, shipdate__c, unitprice__c, unitcost__c, totalrevenue__c, totalcost__c, totalprofit__c from salessystem__c]]></salesforce:salesforce-query>
+		</salesforce:query>
+		<flow-ref doc:name="Flow Reference"
+			doc:id="9204b814-ef5b-47aa-971c-a2fcc35b58d9" name="ETL" />
+		<set-payload
+			value='#[{&#10;	"message": "Added to MDM SYSTEM"&#10;}]'
+			doc:name="Set Payload" doc:id="5a1fabbd-9863-4399-bf1d-b135716218cf"
+			mimeType="application/json" />
+		<logger level="INFO" doc:name="Logger"
+			doc:id="e43c876a-3523-41a3-bd6f-7ad9cf29cb44" message="completed" />
+		<error-handler>
+			<on-error-continue enableNotifications="true"
+				logException="true" doc:name="On Error Continue"
+				doc:id="58996a2d-7211-4d57-8d59-fab7f134e293" type="ANY">
+				<ee:transform doc:name="Transform Message"
+					doc:id="c93b8fb8-dcdb-4864-84f5-0ea6acb46a23">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error-type":error.errorType,
+	"error-cause":error.cause.cause,
+	"error-cause-message": error.cause.message,
+	"errorMessage": error.errorMessage,
+	"error-description": error.detailedDescription
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+	<sub-flow name="ETL"
+		doc:id="fc3947ac-a7c4-4a99-a010-ef948b42aa2a">
+		<batch:job jobName="ETLBatch_Job"
+			doc:id="44bf63f0-3fb3-4107-a0b1-72ca19cfabb1" maxFailedRecords="-1">
+			<batch:process-records>
+				<batch:step name="Online"
+					doc:id="ae316f52-df65-4f8d-9537-a54bece330c9"
+					acceptExpression="#[payload.saleschannel__c == 'Online']">
+					<db:insert doc:name="Insert Into Online Table"
+						doc:id="1141e745-364d-4b03-96d2-534a98d823dd"
+						config-ref="Database_Config">
+						<db:sql><![CDATA[insert into OnlineData(region,country,item_type,sales_channel,order_priority,order_date,order_id,ship_date,unit_price,unit_cost,total_revenue,total_cost,total_profit)values(:regio, :countr, :itemtyp,:saleschanne, :orderpriorit, :orderdat, :orderi, :shipdat, :unitpric, :unitcos, :totalrevenu, :totalcos, :totalprofi)]]></db:sql>
+						<db:input-parameters><![CDATA[#[{
+	regio: payload.region__c,
+	countr: payload.country__c,
+	itemtyp: payload.itemtype__c,
+	saleschanne: payload.saleschannel__c,
+	orderpriorit: payload.orderpriority__c,
+	orderdat: payload.orderdate__c as String as Date {format : "M/d/yyyy"} as Date {format : "yyyy-MM-dd"},
+	orderi: payload.orderid__c,
+	shipdat: payload.shipdate__c as String as Date {format : "M/d/yyyy"} as Date {format : "yyyy-MM-dd"},
+	unitpric: payload.unitprice__c,
+	unitcos: payload.unitcost__c,
+	totalrevenu: payload.totalrevenue__c,
+	totalcos: payload.totalcost__c,
+	totalprofi: payload.totalprofit__c
+}]]]></db:input-parameters>
+					</db:insert>
+				</batch:step>
+				<batch:step name="Offline"
+					doc:id="4b2390fa-690d-4c97-8210-4b3dea4a8d7c"
+					acceptExpression="#[payload.saleschannel__c == 'Offline']">
+					<db:insert doc:name="Offline Table"
+						doc:id="f652a70b-4437-44db-b6d1-356ef52489db"
+						config-ref="Database_Config">
+						<db:sql><![CDATA[insert into OfflineData(region,country,item_type,sales_channel,order_priority,order_date,order_id,ship_date,unit_price,unit_cost,total_revenue,total_cost,total_profit)values(:regio, :countr, :itemtyp,:saleschanne, :orderpriorit, :orderdat, :orderi, :shipdat, :unitpric, :unitcos, :totalrevenu, :totalcos, :totalprofi)]]></db:sql>
+						<db:input-parameters><![CDATA[#[{
+	regio: payload.region__c,
+	countr: payload.country__c,
+	itemtyp: payload.itemtype__c,
+	saleschanne: payload.saleschannel__c,
+	orderpriorit: payload.orderpriority__c,
+	orderdat: payload.orderdate__c as String as Date {format : "M/d/yyyy"} as Date {format : "yyyy-MM-dd"},
+	orderi: payload.orderid__c,
+	shipdat: payload.shipdate__c as String as Date {format : "M/d/yyyy"} as Date {format : "yyyy-MM-dd"},
+	unitpric: payload.unitprice__c,
+	unitcos: payload.unitcost__c,
+	totalrevenu: payload.totalrevenue__c,
+	totalcos: payload.totalcost__c,
+	totalprofi: payload.totalprofit__c
+}]]]></db:input-parameters>
+					</db:insert>
+				</batch:step>
+				<batch:step name="failureRecords"
+					doc:id="06b71f6f-d6ec-4f3e-91dc-05271c79c812"
+					acceptPolicy="ONLY_FAILURES">
+					<db:insert doc:name="Insert Into FailData Table"
+						doc:id="d38a827a-c35f-45df-b331-da2a8939f293"
+						config-ref="Database_Config">
+						<db:sql><![CDATA[insert into FailData(region,country,item_type,sales_channel,order_priority,order_date,order_id,ship_date,unit_price,unit_cost,total_revenue,total_cost,total_profit)values(:regio, :countr, :itemtyp,:saleschanne, :orderpriorit, :orderdat, :orderi, :shipdat, :unitpric, :unitcos, :totalrevenu, :totalcos, :totalprofi)]]></db:sql>
+						<db:input-parameters><![CDATA[#[{
+	regio: payload.region__c,
+	countr: payload.country__c,
+	itemtyp: payload.itemtype__c,
+	saleschanne: payload.saleschannel__c,
+	orderpriorit: payload.orderpriority__c,
+	orderdat: payload.orderdate__c as String as Date {format : "M/d/yyyy"} as Date {format : "yyyy-MM-dd"},
+	orderi: payload.orderid__c,
+	shipdat: payload.shipdate__c as String as Date {format : "M/d/yyyy"} as Date {format : "yyyy-MM-dd"},
+	unitpric: payload.unitprice__c,
+	unitcos: payload.unitcost__c,
+	totalrevenu: payload.totalrevenue__c,
+	totalcos: payload.totalcost__c,
+	totalprofi: payload.totalprofit__c
+}]]]></db:input-parameters>
+					</db:insert>
+				</batch:step>
+				<batch:step name="Batch_Step"
+					doc:id="1e0caa67-9d90-4c44-9133-8a50d7aef033"
+					acceptPolicy="ONLY_FAILURES">
+					<set-payload value="#[Batch::getStepExceptions()]"
+						doc:name="Set Payload"
+						doc:id="e6e1b626-a107-4bf2-8341-6d94803c9c8f" />
+					<batch:aggregator doc:name="Batch Aggregator"
+						doc:id="6e66a137-8661-40d5-9eed-9d09d5c1a4dc" size="1000000">
+						<os:store doc:name="Store"
+							doc:id="38ddef7c-fafc-492b-938c-66d4438061c7" key="faildata"
+							objectStore="Object_store" />
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete>
+				<logger level="INFO" doc:name="Logger"
+					doc:id="6b321bb1-db09-4a43-8cd1-f428e6c53188" message="#[payload]" />
+				<set-variable value="#[payload]"
+					doc:name="Set Variable"
+					doc:id="3d83d5d5-bbb9-473d-a241-60674e6fa7f9" variableName="report" />
+				<os:retrieve doc:name="Retrieve"
+					doc:id="af02d66f-bc61-4db2-88f6-42d8d2281f68" key="faildata"
+					objectStore="Object_store" />
+				<set-variable value="#[payload]"
+					doc:name="Set Variable"
+					doc:id="502f8503-bd09-49bb-8845-d60abcf1449f"
+					variableName="exception" />
+				<parse-template doc:name="Parse Template"
+					doc:id="19b61642-ea29-4da3-8f39-8e1b1e8f19b4">
+					<content>&lt;!DOCTYPE html&gt;
+						&lt;html&gt;
+						&lt;head&gt;
+						&lt;title&gt;&lt;/title&gt;
+
+						&lt;!-- CSS --&gt;
+						&lt;style&gt;
+						.myTable {
+						width: 40%;
+						text-align: left;
+						background-color: lemonchiffon;
+						border-collapse: collapse;
+						}
+						.myTable th {
+						background-color: goldenrod;
+						color: white;
+						}
+						.myTable td,
+						.myTable th {
+						padding: 1px;
+						border: 2px solid goldenrod;
+						}
+						&lt;/style&gt;
+
+						&lt;/head&gt;
+						&lt;body&gt;
+
+						&lt;b&gt;&lt;p style=&quot;color:goldenrod;&quot;&gt;Hello, you are receiving
+						this email, which shows the Batch-Processing report for:&lt;br&gt;
+						API Name:XYZ-Sales-Sys-API&lt;br&gt;
+						API Version: 1.0.0&lt;br&gt;
+						&lt;/p&gt;&lt;/b&gt;
+
+
+						&lt;!-- HTML --&gt;
+						&lt;table class=&quot;myTable&quot;&gt;
+						&lt;tr&gt;
+						&lt;th&gt;Field&lt;/th&gt;
+						&lt;th&gt;Value&lt;/th&gt;
+						&lt;/tr&gt;
+
+						&lt;tr&gt;
+						&lt;td&gt;&lt;b&gt;&lt;p
+						style=&quot;color:maroon&quot;&gt;Environment&lt;/p&gt;&lt;/b&gt;&lt;/td&gt;
+						&lt;td&gt;&lt;b&gt;&lt;p
+						style=&quot;color:maroon&quot;&gt;Development&lt;/p&gt;&lt;/b&gt;&lt;/td&gt;
+						&lt;/tr&gt;
+
+						&lt;tr&gt;
+						&lt;td&gt;&lt;b&gt;&lt;p style=&quot;color:purple&quot;&gt;Application
+						Name&lt;/p&gt;&lt;/b&gt;&lt;/td&gt;
+						&lt;td&gt;&lt;b&gt;&lt;p
+						style=&quot;color:purple&quot;&gt;XYZ-Sales-Sys-API&lt;/p&gt;&lt;/b&gt;&lt;/td&gt;
+						&lt;/tr&gt;
+
+						&lt;tr&gt;
+						&lt;td&gt;&lt;b&gt;&lt;p style=&quot;color:blue&quot;&gt;Total
+						Records&lt;/p&gt;&lt;/b&gt;&lt;/td&gt;
+						&lt;td&gt;&lt;b&gt;&lt;p
+						style=&quot;color:blue&quot;&gt;#[vars.report.totalRecords]&lt;/p&gt;&lt;/b&gt;&lt;/td&gt;
+						&lt;/tr&gt;
+
+						&lt;tr&gt;
+						&lt;td&gt;&lt;b&gt;&lt;p style=&quot;color:green&quot;&gt;Successful
+						Records&lt;/p&gt;&lt;/b&gt;&lt;/td&gt;
+						&lt;td&gt;&lt;b&gt;&lt;p
+						style=&quot;color:green&quot;&gt;#[vars.report.successfulRecords]&lt;/p&gt;&lt;/b&gt;&lt;/td&gt;
+						&lt;/tr&gt;
+
+						&lt;tr&gt;
+						&lt;td&gt;&lt;b&gt;&lt;p style=&quot;color:red&quot;&gt;Failed
+						Records&lt;/p&gt;&lt;/b&gt;&lt;/td&gt;
+						&lt;td&gt;&lt;b&gt;&lt;p
+						style=&quot;color:red&quot;&gt;#[vars.report.failedRecords]&lt;/p&gt;&lt;/b&gt;&lt;/td&gt;
+						&lt;/tr&gt;
+
+
+
+						&lt;/table&gt;
+
+						&lt;/body&gt;
+						&lt;/html&gt;</content>
+				</parse-template>
+				<email:send doc:name="Send_Summary_Of_Records"
+					doc:id="9749cbcb-a08d-4e9d-8ba2-61e68d30684c"
+					config-ref="Email_SMTP" fromAddress="#[p('email.fromAddress')]"
+					subject="#[p('email.subject')]">
+					<email:to-addresses>
+						<email:to-address value="#[p('email.toAddress')]" />
+					</email:to-addresses>
+					<email:bcc-addresses />
+					<email:reply-to-addresses />
+					<email:body contentType="text/html" encoding="UTF-8">
+					</email:body>
+					<email:attachments><![CDATA[#[{
+	exception: vars.exception
+}]]]></email:attachments>
+				</email:send>
+				<logger level="INFO" doc:name="Logger"
+					doc:id="25585508-1c05-454b-9acf-01bb9e4ba759"
+					message="#['Flow has Ended']" />
+			</batch:on-complete>
+		</batch:job>
+	</sub-flow>
+</mule>
