@@ -76,5 +76,5 @@ http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/m
 			accessKey="${secure::aws.accesskey}"
 			secretKey="${secure::aws.secretkey}" region="${aws.region}" />
 	</s3:config>
-	<api-gateway:autodiscovery apiId="16831455" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="b271ef94-9da3-43e3-84f4-4ad5fe490a1c" flowRef="sales_system_api-main" />
+	<api-gateway:autodiscovery apiId="16865521" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="b271ef94-9da3-43e3-84f4-4ad5fe490a1c" flowRef="sales_system_api-main" />
 </mule>
